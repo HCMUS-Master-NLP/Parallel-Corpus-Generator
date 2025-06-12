@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "type": "remove_above",
+      "keyword": ""
+    },
+    {
+      "type": "remove_below",
+      "keyword": "Truyện Tây du ký đến đây là hết"
+    },
+    {
+      "type": "contains",
+      "keywords": []
+    }
+  ]
+}

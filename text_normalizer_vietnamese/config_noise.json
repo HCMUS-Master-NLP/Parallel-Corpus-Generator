@@ -1,0 +1,12 @@
+[
+  { "pattern": "\\|", "replacement": "" },
+  { "pattern": "\\(!\\)", "replacement": "!" },
+  { "pattern": "\\(\\?\\)", "replacement": "?" },
+  { "pattern": "\\(\\.\\)", "replacement": "." },
+  { "pattern": "\\(\\,\\)", "replacement": "," },
+  { "pattern": "\\(\\:\\)", "replacement": ":" },
+  { "pattern": "\\!\\.", "replacement": "!" },
+  { "pattern": "\\?\\.", "replacement": "?" },
+  { "pattern": "\\,\\.", "replacement": "," },
+  { "pattern": "\\:\\.", "replacement": ":" }
+]
