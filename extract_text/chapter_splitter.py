@@ -1,15 +1,9 @@
 
-from pathlib import Path 
-from typing import Literal
-import json
+from pathlib import Path
+from utils import chinese_to_number, vietnamese_to_number
 
 
-def get_split_pattern(config_path: Path, lang: Literal["viet","han"] = "han"):
-    with open("patterns.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-    return config[0][lang]["pattern"]
-
-
+# USE TO GET CHAPTER NUMBER IN VIETNAMESE TEXT
 def vietnamese_to_number(vietnamese: str) -> int:
     viet_numerals = {
         'không': 0,
@@ -56,6 +50,7 @@ def vietnamese_to_number(vietnamese: str) -> int:
     return number
 
 
+# USE TO READ CHAPTER NUMBER IN TRANDITIONAL CHINESE TEXT
 def chinese_to_number(hanzi) -> int:
     numerals = {
         '零': 0, '○': 0, '〇': 0,  # Thêm tất cả biến thể của số 0
@@ -76,12 +71,14 @@ def chinese_to_number(hanzi) -> int:
         for ch in hanzi:
             total = total * 10 + numerals[ch]
         return total
+    
+
 
 if __name__=="__main__":
-    # han_zi = "十九"
-    # number = chinese_to_number(han_zi)
-    # print(f"{han_zi} = {number}") 
-    viet_list = ["NHẤT","HAI","BA","TƯ","NĂM","SÁU","BẢY","TÁM","CHÍN","MƯỜI","MƯỜI MỘT","MƯỜI HAI","HAI MƯƠI","HAI MƯƠI MỐT","NĂM MƯƠI LĂM","MỘT TRĂM","MỘT NGHÌN BỐN TRĂM LẺ HAI"]   
-    for viet in viet_list:
-        number = vietnamese_to_number(viet)
-        print(f"{viet} = {number}")    
+    hanzi = "七二"
+    number = chinese_to_number(hanzi)
+    print(f"{hanzi}: {number}")
+    
+    viet = "HAI MƯƠI LĂM"
+    number = vietnamese_to_number(viet)
+    print(f"{viet}: {number}")

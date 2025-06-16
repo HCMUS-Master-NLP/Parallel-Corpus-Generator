@@ -3,10 +3,13 @@ import logging
 import sys
 from pathlib import Path
 
-from text_img_utils import (
-    extract_pdf_to_text,
-    # get_pdf_name
-)
+# from text_img_utils import (
+#     extract_pdf_to_text,
+#     # get_pdf_name
+# )
+
+from extract_text_from_pdf import extract_text_from_pdf
+
 
 def create_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="OCR PDF files.")
@@ -16,9 +19,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("-np", "--num_pages",type=int,default=20,help="Number of pages to process (default: 20)")
     parser.add_argument("-pt", "--process_text",type=bool,default=True,help="Apply processing to the OCR text (default: True)")
     parser.add_argument("-o", "--output_dir",type=str,default=".",help="Path to save PDF text.")
-    parser.add_argument("--rule_path", type=str, default= "./rules.json", help="Path of JSON file for rule-based text removal.")
-    parser.add_argument("--use_rules", action="store_true", help="Use rule-based text removal.")
-    parser.add_argument("--use_page_split", action="store_true", help="Save the text into multi-file based on their page.")
     return parser
 
 def main():
@@ -65,15 +65,12 @@ def main():
         sys.exit(1)
 
     logger.info(f"Processing {pdf_name} in {pdf_lang} language at {pdf_path}...")
-    extract_pdf_to_text(
+    extract_text_from_pdf(
         pdf_path, 
         output_dir=output_dir, 
         first_page=args.first_page, 
         num_pages=args.num_pages, 
-        lang=pdf_lang, 
-        rule_path=rule_path, 
-        use_rules=args.use_rules, 
-        use_page_split=args.use_page_split)
+        lang=pdf_lang)
     logger.info(f"Finished processing {pdf_name} in {pdf_lang} language.")
 
 if __name__ == "__main__":
