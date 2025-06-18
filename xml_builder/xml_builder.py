@@ -1,16 +1,25 @@
+import logging
+import re
+import xml.dom.minidom as minidom
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List
-import logging
-
-import xml.etree.ElementTree as ET
-import xml.dom.minidom as minidom
-import re
 
 logger = logging.getLogger(__name__)
 
-class XMLBuilder():
 
-    def __init__(self, file:str, title:str, volume:str, author:str, period:str, language:str, source:str):
+class XMLBuilder:
+
+    def __init__(
+        self,
+        file: str,
+        title: str,
+        volume: str,
+        author: str,
+        period: str,
+        language: str,
+        source: str,
+    ):
         """Meta data sample:
         meta_data = {
             "file": "TDK_001",
@@ -32,7 +41,7 @@ class XMLBuilder():
             language (str): Document languge
             source (str): Document source
         """
-        
+
         self.file_id = file
         self.root = ET.Element("root")
         self.file = ET.SubElement(self.root, "FILE", ID=self.file_id)
@@ -45,7 +54,7 @@ class XMLBuilder():
         ET.SubElement(meta, "PERIOD").text = period
         ET.SubElement(meta, "LANGUAGE").text = language
         ET.SubElement(meta, "SOURCE").text = source
-        
+
         self.spit_sencetenc_func = self._split_sentence
         self.xlm_content = None
         self.pages = []
@@ -56,9 +65,8 @@ class XMLBuilder():
             pages (List): List of pages in one section
         """
         self.pages = pages
-    
-    
-    def _split_sentence(self, text:str) ->List:
+
+    def _split_sentence(self, text: str) -> List:
         """Default spliting sentence function
         Split sentences by '.', '!', '?' (basic rule-based segmentation)
         Args:
@@ -67,9 +75,9 @@ class XMLBuilder():
         Returns:
             List: _description_
         """
-        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text.strip()) if s]    
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
         return sentences
-    
+
     def add_section_with_text(self, sect_id: str, sect_name: str, texts: List):
         """
         Add a section (SECT) with parsed sentences in STC tags from input text.
@@ -94,7 +102,13 @@ class XMLBuilder():
         xml_str = ET.tostring(self.root, encoding="unicode")
         return minidom.parseString(xml_str).toprettyxml(indent="    ")
 
-    def save(self, output_name: str = 'output', output_dir:Path = Path('.'), content: str = '',encoding: str = 'utf-8'):
+    def save(
+        self,
+        output_name: str = "output",
+        output_dir: Path = Path("."),
+        content: str = "",
+        encoding: str = "utf-8",
+    ):
         """
         Saves the XML string to a file with .xml extension.
 
@@ -105,25 +119,26 @@ class XMLBuilder():
         # Create parent directories if needed
         output_dir.parent.mkdir(parents=True, exist_ok=True)
         full_path = output_dir / output_name
-        with full_path.open('w', encoding=encoding) as f:
-                f.write(self.to_string())
+        with full_path.open("w", encoding=encoding) as f:
+            f.write(self.to_string())
         logger.info(f"Save file to {full_path}")
 
-        
-    
+
 def main():
-    
-    file="TDK_001"
-    builder = XMLBuilder(file=file,
-                        title="Tây Du Ký",
-                        volume="1",
-                        author="Ngô Thừa Ân",
-                        period="",
-                        language="Việt",
-                        source="",)
-    
-    
-    texts = ["""HỒI THỨ NHẤT
+
+    file = "TDK_001"
+    builder = XMLBuilder(
+        file=file,
+        title="Tây Du Ký",
+        volume="1",
+        author="Ngô Thừa Ân",
+        period="",
+        language="Việt",
+        source="",
+    )
+
+    texts = [
+        """HỒI THỨ NHẤT
             Gốc thiêng ấp ủ, nguồn rộng chảy
             Tâm tính sửa sang, đạo lớn sinh
             Có bài thơ rằng:
@@ -135,26 +150,26 @@ def main():
             Phát minh ra muôn vật tốt thay.
             Muốn hay tạo hóa công dày, “Tây du”[10] truyện ấy đọc ngay đi nào.
             Từng nghe số của trời đất, gồm một trăm hai mươi chín nghìn sáu trăm năm là một nguyên. Một nguyên chia làm mười hai hội, tức mười hai chi: Tý, Sửu,Dần, Mão, Thìn, Tỵ, Ngọ, Mùi, Thân, Dậu, Tuất, Hợi. Mỗi một hội là mười nghìn tám trăm năm. Lại lấy một ngày mà nói: giờ Tý được khí dương, thì giờ Sửu gà gáy. Giờ Dần ánh sáng chưa khắp, thì giờ Mão mặt trời mọc. Giờ Thìn ăn cơm xong, thì giờ Tỵ""",
-            """
+        """
             đã liền kề. Giờ Ngọ mặt trời ở giữa trời, thì giờ Mùi ngả về tây. Giờ Thân là lúc mặt trời lặn ở phương tây. Giờ Tuất là lúc hoàng hôn và giờ Hợi mọi người yên nghỉ. So trong số lớn, đến cuối hội Tuất là lúc trời đất tối tăm mờ mịt, muôn vật ở vào vận bĩ. Vào đầu hội Hợi, đúng lúc đang mờ mịt, người và vật đều chưa có, nên gọi là hỗn độn. Trải qua bốn nghìn năm trăm năm nữa, hội Hợi sắp hết. Hết vòng lại quay lại từ đầu, chuyển sang hội Tý, trở lại dần dần sáng tỏ. Thiệu Khang Tiết[11] nói:
             “Giữa giờ Tý đông chí,
             Lòng trời chẳng đổi dời
             Lúc một dương lay động
             Vạn vật chưa ra đời”
             Đến đây, trời bắt đầu có rễ. Lại trải qua năm nghìn bốn trăm năm, đúng vào hội Tý, những thứ nhẹ trong bay lên, có mặt trời, mặt trăng, tinh tú. Mặt trời, mặt trăng tinh tú (tinh và thần) gọi là tứ tượng. Cho nên nói rằng: trời mở ở Tý. Lại trải qua năm nghìn bốn trăm năm, hội Tý sắp hết, gần sang hội Sửu, thì dần dần rắn chắc. Kinh dịch nói: “Lớn thay đức nguyên của quẻ Càn! Tuyệt thay đức nguyên của kẻ khôn! Vạn vật nhờ đó sinh ra, là thuận theo trời”. Đến đây đất bắt đầu ngưng kết. Lại trải qua bốn nghìn năm
-            """
-        ]    
+            """,
+    ]
     page_num = ["47", "48"]
-    
+
+    # Replace with actual split sentence for Chinese and Vietnamese text
+    # builder.spit_sencetenc_func = ...
+
     builder.set_pages(page_num)
     sect_value = 1
-    sect_id = f'{file}.{sect_value:03d}'
-    builder.add_section_with_text(
-        sect_id=sect_id,
-        sect_name="Tây Du Ký",
-        texts=texts
-    )
+    sect_id = f"{file}.{sect_value:03d}"
+    builder.add_section_with_text(sect_id=sect_id, sect_name="Tây Du Ký", texts=texts)
     builder.save("test.xml")
-    
+
+
 if __name__ == "__main__":
     main()
