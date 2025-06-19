@@ -4,6 +4,7 @@ import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class XMLBuilder:
         """
 
         self.file_id = file
+        self.title = title  
         self.root = ET.Element("root")
         self.file = ET.SubElement(self.root, "FILE", ID=self.file_id)
 
@@ -104,9 +106,8 @@ class XMLBuilder:
 
     def save(
         self,
-        output_name: str = "output",
+        output_name: str = None,
         output_dir: Path = Path("."),
-        content: str = "",
         encoding: str = "utf-8",
     ):
         """
@@ -116,6 +117,10 @@ class XMLBuilder:
             xml_string (str): The XML content as a string.
             output_name (str): Base name for the output file (default is "output").
         """
+        
+        if not output_name:
+            output_name = f"{self.title}.xml"
+        
         # Create parent directories if needed
         output_dir.parent.mkdir(parents=True, exist_ok=True)
         full_path = output_dir / output_name
@@ -123,6 +128,47 @@ class XMLBuilder:
             f.write(self.to_string())
         logger.info(f"Save file to {full_path}")
 
+    def save_by_section(
+        self,
+        output_name: str = None,
+        output_dir: Path = Path("."), 
+        encoding: str = "utf-8",
+    ):
+        """
+        Saves the XML content by section to separate files.
+
+        Args:
+            output_name (str): Base name for the output file (default is None).
+            output_dir (Path): Directory to save the files (default is current directory).
+            encoding (str): Encoding for the output files (default is "utf-8").
+        """
+        if not output_name:
+            output_name = self.title
+
+        # extract data from the root element
+        meta_elem = self.root.find('FILE/meta')
+        
+        for sect in self.root.findall("FILE/SECT"):
+
+            sect_id = sect.get("ID")
+            sect_name = sect.get("NAME")
+            file_name = f"{output_name}_{sect_id}.xml"
+            full_path = output_dir / file_name
+            
+            # Build new XML structure
+            new_root = ET.Element('root')
+            file = ET.SubElement(self.root, "FILE", ID=self.file_id)
+            new_root.append(deepcopy(file))
+            if meta_elem is not None:
+                new_root.find("FILE").append(deepcopy(meta_elem))
+            new_root.find("FILE").append(deepcopy(sect))
+            
+            
+            with full_path.open("w", encoding=encoding) as f:
+                xml_str = ET.tostring(new_root, encoding="unicode")
+                xml_str = minidom.parseString(xml_str).toprettyxml(indent="    ")
+                f.write(xml_str)
+            logger.info(f"Save section {sect_name} to {full_path}" )
 
 def main():
 
@@ -136,40 +182,92 @@ def main():
         language="Việt",
         source="",
     )
-
-    texts = [
-        """HỒI THỨ NHẤT
-            Gốc thiêng ấp ủ, nguồn rộng chảy
-            Tâm tính sửa sang, đạo lớn sinh
-            Có bài thơ rằng:
-            Thuở hoang sơ đất trời chưa tỏ.
-            Chốn mênh mông nào có bóng người.
-            Từ khi Bàn Cổ ra đời.
-            Đục trong phân biệt, khác thời hỗn mang.
-            Che chở khắp nhờ ơn trời đất.
-            Phát minh ra muôn vật tốt thay.
-            Muốn hay tạo hóa công dày, “Tây du”[10] truyện ấy đọc ngay đi nào.
-            Từng nghe số của trời đất, gồm một trăm hai mươi chín nghìn sáu trăm năm là một nguyên. Một nguyên chia làm mười hai hội, tức mười hai chi: Tý, Sửu,Dần, Mão, Thìn, Tỵ, Ngọ, Mùi, Thân, Dậu, Tuất, Hợi. Mỗi một hội là mười nghìn tám trăm năm. Lại lấy một ngày mà nói: giờ Tý được khí dương, thì giờ Sửu gà gáy. Giờ Dần ánh sáng chưa khắp, thì giờ Mão mặt trời mọc. Giờ Thìn ăn cơm xong, thì giờ Tỵ""",
-        """
-            đã liền kề. Giờ Ngọ mặt trời ở giữa trời, thì giờ Mùi ngả về tây. Giờ Thân là lúc mặt trời lặn ở phương tây. Giờ Tuất là lúc hoàng hôn và giờ Hợi mọi người yên nghỉ. So trong số lớn, đến cuối hội Tuất là lúc trời đất tối tăm mờ mịt, muôn vật ở vào vận bĩ. Vào đầu hội Hợi, đúng lúc đang mờ mịt, người và vật đều chưa có, nên gọi là hỗn độn. Trải qua bốn nghìn năm trăm năm nữa, hội Hợi sắp hết. Hết vòng lại quay lại từ đầu, chuyển sang hội Tý, trở lại dần dần sáng tỏ. Thiệu Khang Tiết[11] nói:
-            “Giữa giờ Tý đông chí,
-            Lòng trời chẳng đổi dời
-            Lúc một dương lay động
-            Vạn vật chưa ra đời”
-            Đến đây, trời bắt đầu có rễ. Lại trải qua năm nghìn bốn trăm năm, đúng vào hội Tý, những thứ nhẹ trong bay lên, có mặt trời, mặt trăng, tinh tú. Mặt trời, mặt trăng tinh tú (tinh và thần) gọi là tứ tượng. Cho nên nói rằng: trời mở ở Tý. Lại trải qua năm nghìn bốn trăm năm, hội Tý sắp hết, gần sang hội Sửu, thì dần dần rắn chắc. Kinh dịch nói: “Lớn thay đức nguyên của quẻ Càn! Tuyệt thay đức nguyên của kẻ khôn! Vạn vật nhờ đó sinh ra, là thuận theo trời”. Đến đây đất bắt đầu ngưng kết. Lại trải qua bốn nghìn năm
-            """,
-    ]
-    page_num = ["47", "48"]
+    dummy_data = [
+        {
+        "section_value": 1,
+        "section_content": 
+            {
+                "text": [
+                """HỒI THỨ NHẤT
+                    Gốc thiêng ấp ủ, nguồn rộng chảy
+                    Tâm tính sửa sang, đạo lớn sinh
+                    Có bài thơ rằng:
+                    Thuở hoang sơ đất trời chưa tỏ.
+                    Chốn mênh mông nào có bóng người.
+                    Từ khi Bàn Cổ ra đời.
+                    Đục trong phân biệt, khác thời hỗn mang.
+                    Che chở khắp nhờ ơn trời đất.
+                    Phát minh ra muôn vật tốt thay.
+                    Muốn hay tạo hóa công dày, “Tây du”[10] truyện ấy đọc ngay đi nào.
+                    Từng nghe số của trời đất, gồm một trăm hai mươi chín nghìn sáu trăm năm là một nguyên. Một nguyên chia làm mười hai hội, tức mười hai chi: Tý, Sửu,Dần, Mão, Thìn, Tỵ, Ngọ, Mùi, Thân, Dậu, Tuất, Hợi. Mỗi một hội là mười nghìn tám trăm năm. Lại lấy một ngày mà nói: giờ Tý được khí dương, thì giờ Sửu gà gáy. Giờ Dần ánh sáng chưa khắp, thì giờ Mão mặt trời mọc. Giờ Thìn ăn cơm xong, thì giờ Tỵ""",
+                """
+                    đã liền kề. Giờ Ngọ mặt trời ở giữa trời, thì giờ Mùi ngả về tây. Giờ Thân là lúc mặt trời lặn ở phương tây. Giờ Tuất là lúc hoàng hôn và giờ Hợi mọi người yên nghỉ. So trong số lớn, đến cuối hội Tuất là lúc trời đất tối tăm mờ mịt, muôn vật ở vào vận bĩ. Vào đầu hội Hợi, đúng lúc đang mờ mịt, người và vật đều chưa có, nên gọi là hỗn độn. Trải qua bốn nghìn năm trăm năm nữa, hội Hợi sắp hết. Hết vòng lại quay lại từ đầu, chuyển sang hội Tý, trở lại dần dần sáng tỏ. Thiệu Khang Tiết[11] nói:
+                    “Giữa giờ Tý đông chí,
+                    Lòng trời chẳng đổi dời
+                    Lúc một dương lay động
+                    Vạn vật chưa ra đời”
+                    Đến đây, trời bắt đầu có rễ. Lại trải qua năm nghìn bốn trăm năm, đúng vào hội Tý, những thứ nhẹ trong bay lên, có mặt trời, mặt trăng, tinh tú. Mặt trời, mặt trăng tinh tú (tinh và thần) gọi là tứ tượng. Cho nên nói rằng: trời mở ở Tý. Lại trải qua năm nghìn bốn trăm năm, hội Tý sắp hết, gần sang hội Sửu, thì dần dần rắn chắc. Kinh dịch nói: “Lớn thay đức nguyên của quẻ Càn! Tuyệt thay đức nguyên của kẻ khôn! Vạn vật nhờ đó sinh ra, là thuận theo trời”. Đến đây đất bắt đầu ngưng kết. Lại trải qua bốn nghìn năm
+                    """,
+                ],
+                "page_num": ["47", "48"],
+            },
+        },
+        {
+        "section_value": 2,
+        "section_content": 
+            {
+                "text": [
+                """trăm năm, đúng vào hội Sửu, những thứ nặng đục ngưng xuống. Có nước, có lửa, có núi, có đá, có đất. Nước, lửa, núi, đá, đất gọi là ngũ hình. Cho nên nói rằng: Đất mở ở Sửu. Lại trải qua năm nghìn bốn trăm năm, hội Sửu hết, hội Dần bất đầu, muôn vật sinh ra.Sách Lịch nói: “Khí trời bay xuống, khí đất bốc lên \
+                trời đất giao hòa, muôn vật sinh ra”. Đến đây trời, đất sáng sủa, âm dương giao hòa, Lại trải qua năm nghìn bốn trăm năm, đúng vào hội Dần, sinh người, sinh thú, sinh chim, gọi là tam tài, gồm trời, đất, người định vị. Cho nên nói rằng: người sinh ra ở Dần. Nhớ xưa từ thuở Bàn Cổ mới mở mang, đời Tam Hoàng vừa cai trị, đời Ngũ đế định ra nhân luân, bấy giờ thế giới mới chia ra làm bốn châu lớn.
+                1. Đông Thắng Thần Châu.
+                2. Tây Ngưu Hạ Châu.
+                3. Nam Thiệm Bộ Châu.
+                4. Bắc Câu Lư Châu.
+                Bộ sách này chỉ nói riêng về Đông Thắng Thần Châu. Lúc đó ngoài biển mới thấy có một nước. Nước này gọi là nước Ngạo Lai ở sát gần biển lớn. Giữa biển có một ngọn núi đẹp, gọi là núi Hoa Quả. Chính núi này là mạch tổ của mười châu, cội nguồn của ba""",
+                ],
+                "page_num": ["49"],
+            },
+        },
+        ]
+    
+    
+    # texts = [
+    #         """HỒI THỨ NHẤT
+    #         Gốc thiêng ấp ủ, nguồn rộng chảy
+    #         Tâm tính sửa sang, đạo lớn sinh
+    #         Có bài thơ rằng:
+    #         Thuở hoang sơ đất trời chưa tỏ.
+    #         Chốn mênh mông nào có bóng người.
+    #         Từ khi Bàn Cổ ra đời.
+    #         Đục trong phân biệt, khác thời hỗn mang.
+    #         Che chở khắp nhờ ơn trời đất.
+    #         Phát minh ra muôn vật tốt thay.
+    #         Muốn hay tạo hóa công dày, “Tây du”[10] truyện ấy đọc ngay đi nào.
+    #         Từng nghe số của trời đất, gồm một trăm hai mươi chín nghìn sáu trăm năm là một nguyên. Một nguyên chia làm mười hai hội, tức mười hai chi: Tý, Sửu,Dần, Mão, Thìn, Tỵ, Ngọ, Mùi, Thân, Dậu, Tuất, Hợi. Mỗi một hội là mười nghìn tám trăm năm. Lại lấy một ngày mà nói: giờ Tý được khí dương, thì giờ Sửu gà gáy. Giờ Dần ánh sáng chưa khắp, thì giờ Mão mặt trời mọc. Giờ Thìn ăn cơm xong, thì giờ Tỵ
+    #         """,
+    #         """đã liền kề. Giờ Ngọ mặt trời ở giữa trời, thì giờ Mùi ngả về tây. Giờ Thân là lúc mặt trời lặn ở phương tây. Giờ Tuất là lúc hoàng hôn và giờ Hợi mọi người yên nghỉ. So trong số lớn, đến cuối hội Tuất là lúc trời đất tối tăm mờ mịt, muôn vật ở vào vận bĩ. Vào đầu hội Hợi, đúng lúc đang mờ mịt, người và vật đều chưa có, nên gọi là hỗn độn. Trải qua bốn nghìn năm trăm năm nữa, hội Hợi sắp hết. Hết vòng lại quay lại từ đầu, chuyển sang hội Tý, trở lại dần dần sáng tỏ. Thiệu Khang Tiết[11] nói:
+    #         “Giữa giờ Tý đông chí,
+    #         Lòng trời chẳng đổi dời
+    #         Lúc một dương lay động
+    #         Vạn vật chưa ra đời”
+    #         Đến đây, trời bắt đầu có rễ. Lại trải qua năm nghìn bốn trăm năm, đúng vào hội Tý, những thứ nhẹ trong bay lên, có mặt trời, mặt trăng, tinh tú. Mặt trời, mặt trăng tinh tú (tinh và thần) gọi là tứ tượng. Cho nên nói rằng: trời mở ở Tý. Lại trải qua năm nghìn bốn trăm năm, hội Tý sắp hết, gần sang hội Sửu, thì dần dần rắn chắc. Kinh dịch nói: “Lớn thay đức nguyên của quẻ Càn! Tuyệt thay đức nguyên của kẻ khôn! Vạn vật nhờ đó sinh ra, là thuận theo trời”. Đến đây đất bắt đầu ngưng kết. Lại trải qua bốn nghìn năm
+    #         """,
+    # ]
+    # page_num = ["47", "48"]
 
     # Replace with actual split sentence for Chinese and Vietnamese text
     # builder.spit_sencetenc_func = ...
-
-    builder.set_pages(page_num)
-    sect_value = 1
-    sect_id = f"{file}.{sect_value:03d}"
-    builder.add_section_with_text(sect_id=sect_id, sect_name="Tây Du Ký", texts=texts)
-    builder.save("test.xml")
-
-
+    for data in dummy_data:
+        texts = data["section_content"]["text"]
+        sect_value = data["section_value"]
+        page_num = data["section_content"]["page_num"]
+        builder.set_pages(page_num)
+        sect_id = f"{file}.{sect_value:03d}"
+        breakpoint()
+        builder.add_section_with_text(sect_id=sect_id, sect_name="Tây Du Ký", texts=texts)
+        
+    builder.save_by_section()
+    builder.save()
+    
 if __name__ == "__main__":
     main()
