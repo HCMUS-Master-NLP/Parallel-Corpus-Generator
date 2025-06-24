@@ -3,7 +3,7 @@
 import logging
 import re
 
-from cleaning_config import CleaningConfig
+from quocngu_normalizer.cleaning_config import CleaningConfig
 
 
 class PunctuationNormalizer:

@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Dict, Tuple, List
 import sys
 
-from cleaning_config import LoggerMixin
-from exceptions import FileProcessingError, TextCleanerError
+from quocngu_normalizer.cleaning_config import LoggerMixin
+from quocngu_normalizer.exceptions import FileProcessingError, TextCleanerError
 
 
 class FileProcessor(LoggerMixin):

@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from collections import defaultdict
 
-from cleaning_config import CleaningConfig, LoggerMixin
-from exceptions import TextCleanerError
-from noise_pattern_manager import NoisePatternManager
-from vietnamese_dictionary import VietnameseDictionary
-from text_tokenizer import TextTokenizer
-from punctuation_normalizer import PunctuationNormalizer
+from quocngu_normalizer.cleaning_config import CleaningConfig, LoggerMixin
+from quocngu_normalizer.exceptions import TextCleanerError
+from quocngu_normalizer.noise_pattern_manager import NoisePatternManager
+from quocngu_normalizer.vietnamese_dictionary import VietnameseDictionary
+from quocngu_normalizer.text_tokenizer import TextTokenizer
+from quocngu_normalizer.punctuation_normalizer import PunctuationNormalizer
 
 
 class TextCleaner(LoggerMixin):

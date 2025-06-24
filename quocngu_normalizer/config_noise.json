@@ -1,4 +1,6 @@
 [
+  { "pattern": "\\b\\d+\\.", "replacement": "" },
+  { "pattern": "\\[[^\\]]+\\]", "replacement": "" },
   { "pattern": "\\|", "replacement": "" },
   { "pattern": "\\(!\\)", "replacement": "!" },
   { "pattern": "\\(\\?\\)", "replacement": "?" },

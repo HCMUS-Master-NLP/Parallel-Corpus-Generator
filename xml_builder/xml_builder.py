@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class XMLBuilder:
-
     def __init__(
         self,
         file: str,

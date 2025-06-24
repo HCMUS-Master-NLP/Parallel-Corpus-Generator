@@ -10,8 +10,8 @@ from bertalign.encoder import Encoder
 # See other cross-lingual embedding models at
 # https://www.sbert.net/docs/pretrained_models.html
 
-# model_name = "LaBSE"
-model_name = "paraphrase-multilingual-mpnet-base-v2"
+model_name = "LaBSE"
+# model_name = "paraphrase-multilingual-mpnet-base-v2"
 model = Encoder(model_name)
 
 from bertalign.aligner import Bertalign

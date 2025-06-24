@@ -1,10 +1,57 @@
 
+from typing import Literal, List, Dict
 from pathlib import Path
-from config import CHINESE_CHAPTER_TEMPLATE, VIETNAMESE_CHAPTER_TEMPLATE, SENTENCE_BREAK, PARAGRAPH_BREAK
-from typing import List, Literal
+import os
 import re
 
-# USE TO GET CHAPTER NUMBER IN VIETNAMESE TEXT
+
+def convert_list_to_dict(section: List) -> Dict:
+    '''
+    input: section = [[para_1_sent_1, ...], [para_2_sent_1, ...], ...]
+    output: section_dict = {para_1_sent_1_id: para_1_sent_1, ...}
+    '''
+    section_dict = {}
+    for i, para in enumerate(section):
+        for j, sent in enumerate(para):
+            id = f"{i:03}.{j+1:02}"
+            section_dict[id] = sent
+    return section_dict
+
+
+def extract_sino_section_number(section):
+    # Tìm dòng bắt đầu bằng "HỒI THỨ", sau đó lấy phần chữ phía sau
+    match = re.search(r"^第([一二三四五六七八九十百千零〇○]+)[回囘]", section, re.MULTILINE)
+    if match:
+        return chinese_to_number(match.group(1).strip())
+    return -1
+
+
+def extract_quocngu_section_number(section):
+    # Tìm dòng bắt đầu bằng "HỒI THỨ", sau đó lấy phần chữ phía sau
+    match = re.search(r"^HỒI THỨ ([A-ZÀ-Ỵ\s\-]+)$", section, re.MULTILINE)
+    if match:
+        return vietnamese_to_number(match.group(1).strip())
+    return -1
+
+'''
+sections = [section_text_1, section_text_2]
+'''
+def save_quocngu_sections(folder: Path, sections: List, verbose: bool = False) -> None:
+    for section in sections:
+        number = extract_quocngu_section_number(section)
+        file_name = f"{num:03}"
+        file_path = folder / f"{file_name}.txt"
+        save_txt(section, file_path)
+        if verbose:
+            print(f"Successfully save file {file_path}")
+
+
+def save_txt(text: str, file_path: str) -> None:
+    file_path = Path(file_path)
+    os.makedirs(file_path.parent, exist_ok=True)
+    file_path.write_text(text, encoding="utf-8")
+
+
 def vietnamese_to_number(vietnamese: str) -> int:
     viet_numerals = {
         'không': 0,
@@ -72,48 +119,3 @@ def chinese_to_number(hanzi) -> int:
         for ch in hanzi:
             total = total * 10 + numerals[ch]
         return total
-    
-
-def split_chapter(text: str, lang: Literal["vie","chi_tra"]) -> List:
-    sections = []
-    if lang=="vie":
-        section_pattern = re.compile(VIETNAMESE_CHAPTER_TEMPLATE)
-        lines = [l for l in text.split(SENTENCE_BREAK) if l.strip()]
-        current_section = []
-
-        for line in lines:
-            if section_pattern.match(line):
-                if current_section:
-                    sections.append("".join([l+SENTENCE_BREAK for l in current_section]))
-                    current_section = []
-            current_section.append(line)
-        
-        if current_section:
-            sections.append("".join([l+SENTENCE_BREAK for l in current_section]))
-
-    else:
-        section_pattern = re.compile(CHINESE_CHAPTER_TEMPLATE)
-        lines = [l for l in text.split(PARAGRAPH_BREAK) if l.strip()]
-        current_section = []
-
-        for line in lines:
-            if section_pattern.match(line):
-                if current_section:
-                    sections.append("".join([l+PARAGRAPH_BREAK for l in current_section]))
-                    current_section = []
-            current_section.append(line)
-        
-        if current_section:
-            sections.append("".join([l+PARAGRAPH_BREAK for l in current_section]))
-
-    return sections
-
-
-if __name__=="__main__":
-    hanzi = "七二"
-    number = chinese_to_number(hanzi)
-    print(f"{hanzi}: {number}")
-    
-    viet = "HAI MƯƠI LĂM"
-    number = vietnamese_to_number(viet)
-    print(f"{viet}: {number}")

@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from exceptions import DictionaryError
+from quocngu_normalizer.exceptions import DictionaryError
 
 
 class VietnameseDictionary:

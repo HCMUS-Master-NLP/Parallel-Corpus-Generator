@@ -65,12 +65,13 @@ def main():
         sys.exit(1)
 
     logger.info(f"Processing {pdf_name} in {pdf_lang} language at {pdf_path}...")
-    extract_text_from_pdf(
+    text = extract_text_from_pdf(
         pdf_path, 
-        output_dir=output_dir, 
-        first_page=args.first_page, 
+        # output_dir=output_dir, 
+        start_page=args.first_page, 
         num_pages=args.num_pages, 
         lang=pdf_lang)
+    
     logger.info(f"Finished processing {pdf_name} in {pdf_lang} language.")
 
 if __name__ == "__main__":

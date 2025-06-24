@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from exceptions import ConfigurationError
+from quocngu_normalizer.exceptions import ConfigurationError
 
 
 class NoisePatternManager:

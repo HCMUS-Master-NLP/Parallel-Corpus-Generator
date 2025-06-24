@@ -4,6 +4,7 @@ import os
 from typing import Optional, Literal
 from process_extracted_text import cleanup_extracted_chinese
 from config import PAGE_BREAK, PARAGRAPH_BREAK, SENTENCE_BREAK
+
 def extract_text_simple(
     file_path: str,
     start_page: int = 1,
@@ -78,10 +79,13 @@ def extract_text_from_pdf(
         return extract_text_simple(file_path,start_page,num_pages)
 
 
-def save_text(text: str, file_path: str) -> None:
+def save_text(text: str, file_path: str, lang: Literal["vie","chi_tra"]) -> None:
     file_path = Path(file_path)
     os.makedirs(file_path.parent, exist_ok=True)
     file_path.write_text(text, encoding="utf-8")
+
+
+from chapter_splitter import split_chapter
 
 
 if __name__=="__main__":
@@ -89,13 +93,20 @@ if __name__=="__main__":
     input_path = ""  
     output_path = ""
     text = ""
+
     if lang == "vie":
-        input_path = "D:/tmp/Parallel-Corpus-Generator/data/source/Book-Tay_Du_Ky-Viet.pdf"
-        output_path = "D:/tmp/Parallel-Corpus-Generator/data/raw/vietnamese/Book-Tay_Du_Ky-Viet.txt"
-        text = extract_text_from_pdf(input_path,48,3,lang)
+        input_path = "./data/source/Book-Tay_Du_Ky-Viet.pdf"
+        output_path = "./data/raw/vietnamese/Book-Tay_Du_Ky-Viet.txt"
+        start = 48
+        num = 34
+
     else:
-        input_path = "D:/tmp/Parallel-Corpus-Generator/data/source/Book-Tay_Du_Ky-Trung.pdf"
-        output_path = "D:/tmp/Parallel-Corpus-Generator/data/raw/chinese_traditional/Book-Tay_Du_Ky-Trung.txt"
-        text = extract_text_from_pdf(input_path,1,None,lang)
+        input_path = "./data/source/Book-Tay_Du_Ky-Trung.pdf"
+        output_path = "./data/raw/chinese_traditional/Book-Tay_Du_Ky-Trung.txt"
+        start = 1
+        num = 10
     
-    save_text(text, output_path)
+    text = extract_text_from_pdf(input_path,start,num,lang)
+    sections = split_chapter(text, lang)
+    print(sections[1],end='\n\n========\n\n')
+    save_text(text, output_path, lang)
