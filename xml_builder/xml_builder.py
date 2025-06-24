@@ -106,7 +106,7 @@ class XMLBuilder:
         Args:
             sect_id (str): Section ID like "TDK_001.001"
             sect_name (str): Name of the section
-            pairs (List): List of tuples, each containing a Vietnamese sentence and a Chinese sentence. Each item is a list of senences in the paragraph. 
+            pairs (List): List of list of tuples, each containing a Vietnamese sentence and a Chinese sentence. Each item is a list of senences in the paragraph. 
             paragraphs_lst (List): List of number of paragraphs.
         """
         sect = ET.SubElement(self.file, "SECT", ID=sect_id, NAME=sect_name)
@@ -181,8 +181,8 @@ class XMLBuilder:
 
             # Build new XML structure
             new_root = ET.Element("root")
-            file = ET.SubElement(new_root, "FILE", ID=self.file_id)
-            new_root.append(deepcopy(file))
+            if new_root.find("FILE") is None:
+              file = ET.SubElement(new_root, "FILE", ID=self.file_id)
             if meta_elem is not None:
                 new_root.find("FILE").append(deepcopy(meta_elem))
             new_root.find("FILE").append(deepcopy(sect))
@@ -259,10 +259,11 @@ def main():
         page_num = data["section_content"]["page_num"]
         builder.set_pages(page_num)
         sect_id = f"{file}.{sect_value:03d}"
-        # builder.add_section_with_text(
-        #     sect_id=sect_id, sect_name="Tây Du Ký", texts=texts
-        # )
-        
+        builder.add_section_with_text(
+            sect_id=sect_id, sect_name="Tây Du Ký", texts=texts
+        )
+    builder.save_by_section()
+       
     paragraphs_lst = ["1", "2"]
     pairs = [
         [
@@ -275,9 +276,8 @@ def main():
         ],
     ]
     builder.add_pair_sentence(sect_id=sect_id, sect_name="Tây Du Ký", pairs=pairs, paragraphs_lst=paragraphs_lst)
-
-    builder.save_by_section()
-    builder.save()
+    builder.save_by_section(output_name="TDL_pairs_sentence")
+    # builder.save()
 
 
 if __name__ == "__main__":
