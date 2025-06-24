@@ -1,6 +1,5 @@
 [
-  { "pattern": "\\b\\d+\\.", "replacement": "" },
-  { "pattern": "\\[[^\\]]+\\]", "replacement": "" },
+  {"pattern": "\\[\\d+\\]","replacement": ""},
   { "pattern": "\\|", "replacement": "" },
   { "pattern": "\\(!\\)", "replacement": "!" },
   { "pattern": "\\(\\?\\)", "replacement": "?" },
@@ -10,5 +9,7 @@
   { "pattern": "\\!\\.", "replacement": "!" },
   { "pattern": "\\?\\.", "replacement": "?" },
   { "pattern": "\\,\\.", "replacement": "," },
-  { "pattern": "\\:\\.", "replacement": ":" }
+  { "pattern": "\\:\\.", "replacement": ":" },
+  { "pattern": "\\:\\.", "replacement": ":" },
+  { "pattern": "(?:(?<=^)|(?<=[.?!]\\s))((?:\\d+\\.)+|\\d+\\))\\s+", "replacement": "" }
 ]

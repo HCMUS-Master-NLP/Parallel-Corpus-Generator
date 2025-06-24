@@ -4,11 +4,13 @@ import fitz     # pymupdf
 from pathlib import Path
 import re
 
-PAGE_BREAK = "\f\n"
-PARAGRAPH_BREAK = "\n\n"
-SENTENCE_BREAK = "\n"
-CHINESE_CHAPTER_TEMPLATE = r"^第[一二三四五六七八九十百千零〇○]+[回囘]"
-VIETNAMESE_CHAPTER_TEMPLATE = r"^HỒI THỨ(?: [\wÀ-Ỵ]+)+$"
+from config import GeneratorConfig
+
+# self.config.PAGE_BREAK = "\f\n"
+# self.config.PARAGRAPH_BREAK = "\n\n"
+# self.config.SENTENCE_BREAK = "\n"
+# CHINESE_CHAPTER_TEMPLATE = r"^第[一二三四五六七八九十百千零〇○]+[回囘]"
+# VIETNAMESE_CHAPTER_TEMPLATE = r"^HỒI THỨ(?: [\wÀ-Ỵ]+)+$"
 
 
 class PDFTextExtractor:
@@ -17,8 +19,9 @@ class PDFTextExtractor:
         file_path: str,
         start_page: int = 1,
         num_pages: Optional[int] = None,
-        is_preserve_paragraph: bool = True
+        is_preserve_paragraph: bool = True,
     ):
+        self.config = GeneratorConfig()
         self.file_path = Path(file_path)
         self.start_page = start_page
         self.num_pages = num_pages
@@ -36,7 +39,7 @@ class PDFTextExtractor:
                 end_idx = len(pdf_file)
             
             text = "".join([
-                pdf_file[i].get_text("text") + PAGE_BREAK
+                pdf_file[i].get_text("text") + self.config.PAGE_BREAK
                 for i in range(start_idx, end_idx)
             ])
         return text
@@ -60,13 +63,13 @@ class PDFTextExtractor:
                         lines.append(" ".join(span_texts))
                     
                     # add "\n" at the end of each line in a paragraph
-                    paragraphs.append("".join([line + SENTENCE_BREAK for line in lines]))
+                    paragraphs.append("".join([line + self.config.SENTENCE_BREAK for line in lines]))
 
                 # add "\n\n" at the end of each paragraph in a page
-                pages_text.append("".join([p + PARAGRAPH_BREAK for p in paragraphs]))
+                pages_text.append("".join([p + self.config.PARAGRAPH_BREAK for p in paragraphs]))
 
             # add "chr(12)\n" or "\f\n" at the end of each page in pdf document
-            pages_text = "".join([text + PAGE_BREAK for text in pages_text])
+            pages_text = "".join([text + self.config.PAGE_BREAK for text in pages_text])
         return pages_text
 
 
@@ -75,7 +78,8 @@ class QuocNguPDFExtractor(PDFTextExtractor):
         self,
         file_path: str,
         start_page: int = 1,
-        num_pages: Optional[int] = None
+        num_pages: Optional[int] = None,
+        config: Optional[GeneratorConfig] = None
     ):
         super().__init__(file_path, start_page, num_pages, False)
         self.text = self._get_text()
@@ -83,29 +87,28 @@ class QuocNguPDFExtractor(PDFTextExtractor):
     def _get_text(self) -> str:
         text = self._extract_text_simple()
         return self._cleanup_text(text)
-        return text
     
     def _add_poem_period(self, text: str) -> str:
         """
             add period at the end of poem sentences
         """
-        page_text_list = list(p for p in text.split(PAGE_BREAK) if p.strip())
+        page_text_list = list(p for p in text.split(self.config.PAGE_BREAK) if p.strip())
         processed_page_list = []
         pattern = re.compile(r"^HỒI THỨ(?: [\wÀ-Ỵ]+)+$")
         for page in page_text_list:
-            lines = list(l for l in page.split(SENTENCE_BREAK) if l.strip())
+            lines = list(l for l in page.split(self.config.SENTENCE_BREAK) if l.strip())
             processed_lines = []
             for i, line in enumerate(lines):
                 if pattern.match(line.strip()):
                     pass
-                elif (len(line.split(' ')) in [4,5,7,6,8]) and (not re.search(r"[.,;:?!]", line[-2:])) and (line.lstrip()[0].isalpha()) and (line.lstrip()[0].isupper()):
+                elif (len(line.split(' ')) in [5,7,6,8]) and (not re.search(r"[.,;:?!]", line[-2:])) and (line.lstrip()[0].isalpha()) and (line.lstrip()[0].isupper()):
                     line = line + '.'        
                 processed_lines.append(line)
-            processed_page_list.append("".join([line + SENTENCE_BREAK for line in processed_lines]))
-        return "".join([p + PAGE_BREAK for p in processed_page_list])
+            processed_page_list.append("".join([line + self.config.SENTENCE_BREAK for line in processed_lines]))
+        return "".join([p + self.config.PAGE_BREAK for p in processed_page_list])
 
     def _merge_page_break_sentences(self, text: str) -> str:
-        page_text_list = [p for p in text.split(PAGE_BREAK) if p.strip()]
+        page_text_list = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
         if not page_text_list:
             return ""
 
@@ -113,8 +116,8 @@ class QuocNguPDFExtractor(PDFTextExtractor):
         repaired_page_list = [page_text_list[0]]
 
         for page in page_text_list[1:]:
-            prev_lines = [l for l in repaired_page_list[-1].split(SENTENCE_BREAK) if l.strip()]
-            current_lines = [l for l in page.split(SENTENCE_BREAK) if l.strip()]
+            prev_lines = [l for l in repaired_page_list[-1].split(self.config.SENTENCE_BREAK) if l.strip()]
+            current_lines = [l for l in page.split(self.config.SENTENCE_BREAK) if l.strip()]
 
             if not prev_lines or not current_lines:
                 # repaired_page_list.append(page)
@@ -129,16 +132,16 @@ class QuocNguPDFExtractor(PDFTextExtractor):
 
             elif len(prev_last_line) >= 1 and not re.search(r"[.;:?!]", prev_last_line[-2:]):
                 # Gộp dòng cuối và đầu
-                merged = prev_last_line + ' ' + curr_first_line + SENTENCE_BREAK
-                repaired_page_list[-1] = "".join([l + SENTENCE_BREAK for l in prev_lines[:-1]]) + merged
+                merged = prev_last_line + ' ' + curr_first_line + self.config.SENTENCE_BREAK
+                repaired_page_list[-1] = "".join([l + self.config.SENTENCE_BREAK for l in prev_lines[:-1]]) + merged
                 current_lines = current_lines[1:]
 
             if current_lines:
-                repaired_page_list.append("".join([l + SENTENCE_BREAK for l in current_lines]))
-        return "".join([p + PAGE_BREAK for p in repaired_page_list])
+                repaired_page_list.append("".join([l + self.config.SENTENCE_BREAK for l in current_lines]))
+        return "".join([p + self.config.PAGE_BREAK for p in repaired_page_list])
     
     def _merge_newline_break_sentences(self, text: str) -> str:
-        page_text_list = [p for p in text.split(PAGE_BREAK) if p.strip()]
+        page_text_list = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
         if not page_text_list:
             return ""
 
@@ -146,7 +149,7 @@ class QuocNguPDFExtractor(PDFTextExtractor):
         repaired_page_list = []
 
         for page in page_text_list:
-            lines = [l for l in page.split(SENTENCE_BREAK) if l.strip()]
+            lines = [l for l in page.split(self.config.SENTENCE_BREAK) if l.strip()]
             if not lines:
                 repaired_page_list.append("")
                 continue
@@ -163,31 +166,31 @@ class QuocNguPDFExtractor(PDFTextExtractor):
                 else:
                     repaired_lines.append(current_line)
 
-            repaired_page_list.append("".join([l + SENTENCE_BREAK for l in repaired_lines]))
-        return "".join([p + PAGE_BREAK for p in repaired_page_list])
+            repaired_page_list.append("".join([l + self.config.SENTENCE_BREAK for l in repaired_lines]))
+        return "".join([p + self.config.PAGE_BREAK for p in repaired_page_list])
 
     def _cleanup_text(self, text: str) -> str:
         text = self._add_poem_period(text)
         text = self._merge_newline_break_sentences(text)
         text = self._merge_page_break_sentences(text)
-        text = text.replace(PAGE_BREAK,'')
+        text = text.replace(self.config.PAGE_BREAK,'')
         return text
 
     def get_splitted_sections(self, template) -> List:
         sections = []
         section_pattern = re.compile(template)
-        lines = [l for l in self.text.split(SENTENCE_BREAK) if l.strip()]
+        lines = [l for l in self.text.split(self.config.SENTENCE_BREAK) if l.strip()]
         current_section = []
 
         for line in lines:
             if section_pattern.match(line.strip()):
                 if current_section:
-                    sections.append("".join([l+SENTENCE_BREAK for l in current_section]))
+                    sections.append("".join([l+self.config.SENTENCE_BREAK for l in current_section]))
                     current_section = []
             current_section.append(line)
         
         if current_section:
-            sections.append("".join([l+SENTENCE_BREAK for l in current_section]))
+            sections.append("".join([l+self.config.SENTENCE_BREAK for l in current_section]))
 
         return sections
 
@@ -247,80 +250,80 @@ class SinoNomPDFExtractor(PDFTextExtractor):
         return ratio >= threshold
 
     def _remove_non_chinese_lines(self, text) -> str:
-        page_text = [p for p in text.split(PAGE_BREAK) if p.strip()]
+        page_text = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
 
         if len(page_text) == 0:
             return ""
         
         filtered_pages = []
         for i in range(len(page_text)):
-            paragraphs = [p for p in page_text[i].split(PARAGRAPH_BREAK) if p.strip()]
+            paragraphs = [p for p in page_text[i].split(self.config.PARAGRAPH_BREAK) if p.strip()]
             filtered_paragraphs = []
             for j in range(len(paragraphs)):
-                lines = [line for line in paragraphs[j].split(SENTENCE_BREAK) if line.strip()]
+                lines = [line for line in paragraphs[j].split(self.config.SENTENCE_BREAK) if line.strip()]
                 
                 # filter lines in a paragraph are not traditional chinese lines
                 filtered_lines = [line for line in lines if self._is_traditional_chinese_line(line.strip())]
                 
                 # If paragraph does not just contain not chinese lines
                 if filtered_lines:
-                    filtered_paragraphs.append("".join([line + SENTENCE_BREAK for line in filtered_lines]))
+                    filtered_paragraphs.append("".join([line + self.config.SENTENCE_BREAK for line in filtered_lines]))
             
             if filtered_paragraphs:
-                filtered_pages.append("".join([p+PARAGRAPH_BREAK for p in filtered_paragraphs]))
+                filtered_pages.append("".join([p+self.config.PARAGRAPH_BREAK for p in filtered_paragraphs]))
         
         if filtered_pages:
-            filtered_text = "".join([p+PAGE_BREAK for p in filtered_pages])
+            filtered_text = "".join([p+self.config.PAGE_BREAK for p in filtered_pages])
         else:
             filtered_text = ""
         return filtered_text
 
     def _merge_splitted(self, text: str) -> str:
         '''Merge any two adjacent paragraphs in text if they are from one paragraph'''
-        pages = [p for p in text.split(PAGE_BREAK) if p.strip()]
+        pages = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
         if not pages:
             return text
         
         # merge paragraphs within a page
         repaired_pages = []
         for page in pages:
-            # Split by using SENTENCE_BREAK AND PARAGRAPH_BREAK because we just want to get raw text with no SENTENCE BREAK at the end of each paragraph
-            paragraphs = [p for p in page.split(SENTENCE_BREAK+PARAGRAPH_BREAK) if p.strip()]
+            # Split by using self.config.SENTENCE_BREAK AND self.config.PARAGRAPH_BREAK because we just want to get raw text with no SENTENCE BREAK at the end of each paragraph
+            paragraphs = [p for p in page.split(self.config.SENTENCE_BREAK+self.config.PARAGRAPH_BREAK) if p.strip()]
             repaired_paragraphs = [paragraphs[0]]
             for i in range(1,len(paragraphs)):
                 if self._is_likely_continuation(repaired_paragraphs[-1], paragraphs[i]):
                     repaired_paragraphs[-1] = repaired_paragraphs[-1] + paragraphs[i]
                 else:
                     repaired_paragraphs.append(paragraphs[i])        
-            repaired_pages.append("".join(p + SENTENCE_BREAK + PARAGRAPH_BREAK for p in repaired_paragraphs))
+            repaired_pages.append("".join(p + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK for p in repaired_paragraphs))
         pages = repaired_pages
         
         # merge paragraphs across pages
         repaired_pages = [pages[0]]
         for i in range(1,len(pages)):
-            # Split by using SENTENCE_BREAK AND PARAGRAPH_BREAK because we just want to get raw text with no SENTENCE BREAK at the end of each paragraph
-            prev_paragraphs = [p for p in repaired_pages[-1].split(SENTENCE_BREAK + PARAGRAPH_BREAK) if p.strip()]
-            curr_paragraphs = [p for p in pages[i].split(SENTENCE_BREAK + PARAGRAPH_BREAK) if p.strip()]
+            # Split by using self.config.SENTENCE_BREAK AND self.config.PARAGRAPH_BREAK because we just want to get raw text with no SENTENCE BREAK at the end of each paragraph
+            prev_paragraphs = [p for p in repaired_pages[-1].split(self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK) if p.strip()]
+            curr_paragraphs = [p for p in pages[i].split(self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK) if p.strip()]
             
             if prev_paragraphs and curr_paragraphs:
                 if self._is_likely_continuation(prev_paragraphs[-1], curr_paragraphs[0]):
                     prev_paragraphs[-1] = prev_paragraphs[-1] + curr_paragraphs[0]
                     curr_paragraphs = curr_paragraphs[1:]
             
-            prev_page = "".join(p + SENTENCE_BREAK + PARAGRAPH_BREAK for p in prev_paragraphs)
-            curr_page = "".join(p + SENTENCE_BREAK + PARAGRAPH_BREAK for p in curr_paragraphs)
+            prev_page = "".join(p + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK for p in prev_paragraphs)
+            curr_page = "".join(p + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK for p in curr_paragraphs)
             
             repaired_pages[-1] = prev_page
             if curr_page.strip():  # add only if curr_page has content
                 repaired_pages.append(curr_page)
         
-        repaired_pages = "".join(p + PAGE_BREAK for p in repaired_pages)
+        repaired_pages = "".join(p + self.config.PAGE_BREAK for p in repaired_pages)
         return repaired_pages
 
     def _is_likely_continuation(self, prev_paragraph: str, curr_paragraph: str) -> bool:
         '''check if two paragraphs might be from one paragraph'''
-        prev_last_line = [s for s in prev_paragraph.split(SENTENCE_BREAK) if s.strip()][-1]
-        curr_first_line = [s for s in curr_paragraph.split(SENTENCE_BREAK) if s.strip()][0]
+        prev_last_line = [s for s in prev_paragraph.split(self.config.SENTENCE_BREAK) if s.strip()][-1]
+        curr_first_line = [s for s in curr_paragraph.split(self.config.SENTENCE_BREAK) if s.strip()][0]
         
         # Must be the first condition
         if bool(re.search(r"第[一二三四五六七八九十百千萬〇○零]+回", prev_last_line)):
@@ -346,16 +349,16 @@ class SinoNomPDFExtractor(PDFTextExtractor):
 
     def _remove_endline(self, text: str) -> str:
         '''Remove every sentence break at the end of each line'''
-        text = [p for p in text.split(PAGE_BREAK) if p.strip()]
+        text = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
         processed_text = []
         for page_text in text:
-            page_text = [p for p in page_text.split(SENTENCE_BREAK+PARAGRAPH_BREAK) if p.strip()]
+            page_text = [p for p in page_text.split(self.config.SENTENCE_BREAK+self.config.PARAGRAPH_BREAK) if p.strip()]
             
             # remove endline in each paragraph of a page
-            processed_page_text = [paragraph.replace(SENTENCE_BREAK," ") for paragraph in page_text]
+            processed_page_text = [paragraph.replace(self.config.SENTENCE_BREAK," ") for paragraph in page_text]
             
-            processed_text.append("".join([p + PARAGRAPH_BREAK for p in processed_page_text]))
-        processed_text = "".join(p + PAGE_BREAK for p in processed_text)
+            processed_text.append("".join([p + self.config.PARAGRAPH_BREAK for p in processed_page_text]))
+        processed_text = "".join(p + self.config.PAGE_BREAK for p in processed_text)
         return processed_text
 
     def _cleanup_text(self, text: str) -> str:
@@ -371,13 +374,13 @@ class SinoNomPDFExtractor(PDFTextExtractor):
         # text = self._remove_endline(text)
         
         # step 4: remove all page break in text
-        text = text.replace(PAGE_BREAK,"")
+        text = text.replace(self.config.PAGE_BREAK,"")
 
         processed_text = text
         return processed_text
       
     def _merge_page_break_sentences(self, text: str) -> str:
-        page_text_list = [p for p in text.split(PAGE_BREAK) if p.strip()]
+        page_text_list = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
         if not page_text_list:
             return ""
 
@@ -385,8 +388,8 @@ class SinoNomPDFExtractor(PDFTextExtractor):
         repaired_page_list = [page_text_list[0]]
 
         for page in page_text_list[1:]:
-            prev_paragraphs = [p for p in repaired_page_list[-1].split(SENTENCE_BREAK + PARAGRAPH_BREAK) if p.strip()]
-            curr_paragraphs = [p for p in page.split(SENTENCE_BREAK + PARAGRAPH_BREAK) if p.strip()]
+            prev_paragraphs = [p for p in repaired_page_list[-1].split(self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK) if p.strip()]
+            curr_paragraphs = [p for p in page.split(self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK) if p.strip()]
 
             if not prev_paragraphs or not curr_paragraphs:
                 repaired_page_list.append(page)
@@ -400,23 +403,23 @@ class SinoNomPDFExtractor(PDFTextExtractor):
                 continue
 
             if self._is_likely_continuation(prev_last_para, curr_first_para):
-                repaired_page_list[-1] = repaired_page_list[-1].rstrip() + curr_first_para.strip() + SENTENCE_BREAK + PARAGRAPH_BREAK
+                repaired_page_list[-1] = repaired_page_list[-1].rstrip() + curr_first_para.strip() + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK
                 curr_paragraphs = curr_paragraphs[1:]
-                repaired_page_list.append("".join([p.rstrip() + SENTENCE_BREAK + PARAGRAPH_BREAK for p in curr_paragraphs]))
+                repaired_page_list.append("".join([p.rstrip() + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK for p in curr_paragraphs]))
             else:
                 repaired_page_list.append(page)
 
-        return "".join([p + PAGE_BREAK for p in repaired_page_list])
+        return "".join([p + self.config.PAGE_BREAK for p in repaired_page_list])
     
     def _merge_newline_break_paragraph(self, text: str) -> str:
-        page_text_list = [p for p in text.split(PAGE_BREAK) if p.strip()]
+        page_text_list = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
         if not page_text_list:
             return ""
 
         pattern = re.compile(r"^第[一二三四五六七八九十百千零〇○]+[回囘]")
         repaired_page_list = []
         for page in page_text_list:
-            paragraphs = [p for p in page.split(SENTENCE_BREAK + PARAGRAPH_BREAK) if p.strip()]
+            paragraphs = [p for p in page.split(self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK) if p.strip()]
 
             # if page is null
             if not paragraphs:
@@ -435,12 +438,12 @@ class SinoNomPDFExtractor(PDFTextExtractor):
                 else:
                     repaired_paragraphs.append(para)
             
-            repaired_page_list.append("".join([p.rstrip() + SENTENCE_BREAK + PARAGRAPH_BREAK for p in repaired_paragraphs]))
+            repaired_page_list.append("".join([p.rstrip() + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK for p in repaired_paragraphs]))
 
-        return "".join([p + PAGE_BREAK for p in repaired_page_list])
+        return "".join([p + self.config.PAGE_BREAK for p in repaired_page_list])
 
     # def _merge_newline_break_sentences(self, text: str) -> str:
-    #     page_text_list = [p for p in text.split(PAGE_BREAK) if p.strip()]
+    #     page_text_list = [p for p in text.split(self.config.PAGE_BREAK) if p.strip()]
     #     if not page_text_list:
     #         return ""
 
@@ -448,43 +451,43 @@ class SinoNomPDFExtractor(PDFTextExtractor):
     #     repaired_page_list = []
 
     #     for page in page_text_list:
-    #         paragraphs = [p for p in page.split(SENTENCE_BREAK + PARAGRAPH_BREAK) if p.strip()]
+    #         paragraphs = [p for p in page.split(self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK) if p.strip()]
     #         repaired_para_list = []
     #         for para in paragraphs:
-    #             lines = [l for l in para.split(SENTENCE_BREAK) if l.strip()]            
-    #     return "".join([p + PAGE_BREAK for p in repaired_page_list])
+    #             lines = [l for l in para.split(self.config.SENTENCE_BREAK) if l.strip()]            
+    #     return "".join([p + self.config.PAGE_BREAK for p in repaired_page_list])
 
     def get_splitted_sections(self, template) -> List:
         section_pattern = re.compile(template)
-        paragraphs = [l for l in self.text.split(SENTENCE_BREAK + PARAGRAPH_BREAK) if l.strip()]
+        paragraphs = [l for l in self.text.split(self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK) if l.strip()]
         sections = []
         current_section = []
         for para in paragraphs:
-            lines = [l for l in para.split(SENTENCE_BREAK) if l.strip()]
+            lines = [l for l in para.split(self.config.SENTENCE_BREAK) if l.strip()]
             if section_pattern.match(lines[0]):
                 if current_section:
-                    sections.append("".join([p.rstrip() + SENTENCE_BREAK + PARAGRAPH_BREAK for p in current_section]))
+                    sections.append("".join([p.rstrip() + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK for p in current_section]))
                     current_section = []
 
             current_section.append(para)
         
         if current_section:
-            sections.append("".join([p.rstrip() + SENTENCE_BREAK + PARAGRAPH_BREAK for p in current_section]))
+            sections.append("".join([p.rstrip() + self.config.SENTENCE_BREAK + self.config.PARAGRAPH_BREAK for p in current_section]))
 
         return sections
         # sections = []
         # section_pattern = re.compile(template)
-        # lines = [l for l in self.text.split(PARAGRAPH_BREAK) if l.strip()]
+        # lines = [l for l in self.text.split(self.config.PARAGRAPH_BREAK) if l.strip()]
         # current_section = []
 
         # for line in lines:
         #     if section_pattern.match(line):
         #         if current_section:
-        #             sections.append("".join([l+PARAGRAPH_BREAK for l in current_section]))
+        #             sections.append("".join([l+self.config.PARAGRAPH_BREAK for l in current_section]))
         #             current_section = []
         #     current_section.append(line)
         
         # if current_section:
-        #     sections.append("".join([l+PARAGRAPH_BREAK for l in current_section]))
+        #     sections.append("".join([l+self.config.PARAGRAPH_BREAK for l in current_section]))
 
         # return sections

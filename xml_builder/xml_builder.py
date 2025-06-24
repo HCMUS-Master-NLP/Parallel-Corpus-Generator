@@ -145,7 +145,8 @@ class XMLBuilder:
             output_name = f"{self.title}.xml"
 
         # Create parent directories if needed
-        output_dir.parent.mkdir(parents=True, exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
         full_path = output_dir / output_name
         with full_path.open("w", encoding=encoding) as f:
             f.write(self.to_string())

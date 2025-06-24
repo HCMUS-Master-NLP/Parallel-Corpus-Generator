@@ -38,7 +38,7 @@ sections = [section_text_1, section_text_2]
 '''
 def save_quocngu_sections(folder: Path, sections: List, verbose: bool = False) -> None:
     for section in sections:
-        number = extract_quocngu_section_number(section)
+        num = extract_quocngu_section_number(section)
         file_name = f"{num:03}"
         file_path = folder / f"{file_name}.txt"
         save_txt(section, file_path)
