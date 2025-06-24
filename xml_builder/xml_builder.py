@@ -98,6 +98,30 @@ class XMLBuilder:
                 stc = ET.SubElement(page, "STC", ID=stc_id)
                 stc.text = sentence
 
+    def add_pair_sentence(self, sect_id: str, sect_name: str, pairs: List, paragraphs_lst: List):
+        """
+        Add a section (SECT) with (C) and (V) for a pair of sentences alignment.
+
+        Args:
+            sect_id (str): Section ID like "TDK_001.001"
+            sect_name (str): Name of the section
+            pairs (List): List of tuples, each containing a Vietnamese sentence and a Chinese sentence. Each item is a list of senences in the paragraph. 
+            paragraphs_lst (List): List of number of paragraphs.
+        """
+        sect = ET.SubElement(self.file, "SECT", ID=sect_id, NAME=sect_name)
+        for  pragrpah_num, pairs_sentences in zip(paragraphs_lst, pairs):
+            pragrpahs_id = f"{sect_id}.{int(pragrpah_num):03}"
+            page = ET.SubElement(sect, "PAGE", ID=pragrpahs_id)
+            for i, pair in enumerate(pairs_sentences, start=1):
+                v_sentence, c_sentence = pair
+                stc_id = f"{pragrpahs_id}.{i:02}"
+                stc = ET.SubElement(page, "STC", ID=stc_id)
+                c_stc = ET.SubElement(stc, "C")
+                c_stc.text = c_sentence
+                v_stc = ET.SubElement(stc, "V")
+                v_stc.text = v_sentence
+                
+                
     def to_string(self) -> str:
         """Return pretty-printed XML string."""
         xml_str = ET.tostring(self.root, encoding="unicode")
@@ -234,9 +258,22 @@ def main():
         page_num = data["section_content"]["page_num"]
         builder.set_pages(page_num)
         sect_id = f"{file}.{sect_value:03d}"
-        builder.add_section_with_text(
-            sect_id=sect_id, sect_name="Tây Du Ký", texts=texts
-        )
+        # builder.add_section_with_text(
+        #     sect_id=sect_id, sect_name="Tây Du Ký", texts=texts
+        # )
+        
+    paragraphs_lst = ["1", "2"]
+    pairs = [
+        [
+            ["HỒI THỨ NHẤT", "第一回"],
+            ["Gốc thiêng ấp ủ, nguồn rộng chảy", "神灵孕育，源远流长"],
+        ],
+        [
+            ["Tâm tính sửa sang, đạo lớn sinh", "心性修正，道大生"],
+            ["Có bài thơ rằng:", "有诗云："],
+        ],
+    ]
+    builder.add_pair_sentence(sect_id=sect_id, sect_name="Tây Du Ký", pairs=pairs, paragraphs_lst=paragraphs_lst)
 
     builder.save_by_section()
     builder.save()
