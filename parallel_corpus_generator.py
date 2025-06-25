@@ -2,13 +2,14 @@
 import re
 from typing import List, Dict, Optional
 from pathlib import Path
+import json
+from underthesea import word_tokenize
 
 from config import GeneratorConfig, LoggerMixin
 from pdf_extractor import SinoNomPDFExtractor, QuocNguPDFExtractor
-from quocngu_preprocessing import QuocNguPreprocessor
-from sinonom_preprocessing import SinoNomPreprocessor
+from preprocessor import QuocNguPreprocessor, SinoNomPreprocessor
 from bertalign import Bertalign
-from xml_builder.xml_builder import XMLBuilder
+from xml_builder import XMLBuilder
 
 
 class ParallelCorpusGenerator(LoggerMixin):
@@ -93,24 +94,21 @@ class ParallelCorpusGenerator(LoggerMixin):
             end_page = self.config.quocngu_start_page + self.config.quocngu_num_pages - 1
             self.logger.info(f"Successfully extracted text from page {self.config.quocngu_start_page} to {end_page} from Vietnamese PDF text.")
 
-    def align(self):
-        pass
-
-    def align_sections(self, sect_ids: Optional[List] = None):
+    def align_and_save_sections(self, sect_ids: Optional[List] = None):
         for sect_id in sect_ids:
             sect_id = str(sect_id)
             if sect_id in self.sinonom_sections.keys() and sect_id in self.quocngu_sections.keys():
-                sinonom_section = self.sinonom_preprocessor.norm_and_split(self.sinonom_sections[sect_id])
-                sinonom_sentences, sinonom_para_ids = self._flatten_section_with_para_ids(sinonom_section)
+                sinonom_section = self.sinonom_preprocessor.norm_and_split_sents(self.sinonom_sections[sect_id])
+                sinonom_sentence_list, sinonom_para_ids = self._flatten_section_with_para_ids(sinonom_section)
 
-                quocngu_sentences = self.quocngu_preprocessor.norm_and_split(self.quocngu_sections[sect_id])
+                quocngu_sentence_list = self.quocngu_preprocessor.norm_and_split_sents(self.quocngu_sections[sect_id])
 
-                sinonom_sentences = '\n'.join(sinonom_sentences)
-                quocngu_sentences = '\n'.join(quocngu_sentences)
+                sinonom_sentence_text = '\n'.join(sinonom_sentence_list)
+                quocngu_sentence_text = '\n'.join(quocngu_sentence_list)
 
                 aligner = Bertalign(
-                    sinonom_sentences, 
-                    quocngu_sentences, 
+                    sinonom_sentence_text, 
+                    quocngu_sentence_text, 
                     self.config.align_options['max_align'],
                     self.config.align_options['top_k'],
                     self.config.align_options['win'],
@@ -121,18 +119,92 @@ class ParallelCorpusGenerator(LoggerMixin):
                 aligner.align_sents()
         
                 if self.config.verbose: 
-                    self.logger.info(f"Successfully align SinoNom-Vietnamese text from section {sect_id}")
+                    self.logger.info(f"Successfully align SinoNom-Vietnamese text from section {sect_id}.")
                 
-                aligner.print_sents()
-                print(aligner.result)
+                self._save_aligned_section(
+                    sect_id,
+                    sinonom_sentence_list,
+                    quocngu_sentence_list,
+                    aligner.result,
+                    sinonom_para_ids)
+    
+    def _clean_chinese_text(self, text):
+        # Danh sách dấu câu và ký hiệu cần loại bỏ
+        punctuation_pattern = r'[ 。，、；：？！…—·．「」『』“”‘’（）〈〉《》【】［］〔〕＼／—~@#$%^&*+=<>`|:?]'
+        
+        # Xoá dấu
+        cleaned = re.sub(punctuation_pattern, '', text)
+        return cleaned
+    
+    def _is_vietnamese_word(self, token):
+        # Giữ token chỉ gồm các chữ cái, chữ số (kể cả có dấu)
+        return re.fullmatch(r"[A-Za-zÀ-ỹà-ỹĐđ1-9]+", token) is not None
+    
+    def _save_stat_section(
+        self, 
+        sect_id, 
+        pairs,
+    ):
+        ''' Format:
+            {
+                "num_pairs": int,
+                "num_paragraphs": int,
+                "paragraph_length_list": List,
+                "vietnamese":{
+                    "sentence_length_list": List,
+                    "unique_token_list": List
+                },
+                "chinese":{
+                    "sentence_length_list": List,
+                    "unique_token_list": List
+                }
+            }
+        '''
+        stat = {}
+        para_length_list = []
+        
+        token_dict = {}
+        token_dict['chinese'] = []
+        token_dict['vietnamese'] = []
+        
+        sent_length_dict = {}
+        sent_length_dict['chinese'] = []
+        sent_length_dict['vietnamese'] = []
+        
+        for para_pairs in pairs:
+            para_length_list.append(len(para_pairs))
+            for chinese_sent, vietnamese_sent in para_pairs:
+                vietnamese_token_list = [token for token in word_tokenize(vietnamese_sent) if self._is_vietnamese_word(token)]
+                sent_length_dict['vietnamese'].append(len(vietnamese_token_list))
+                token_dict['vietnamese'].extend(vietnamese_token_list)
                 
-                # self._save_aligned_section(
-                #     sect_id,
-                #     sinonom_sentences,
-                #     quocngu_sentences,
-                #     aligner.result,
-                #     sinonom_para_ids)
-
+                chinese_token_list = list(self._clean_chinese_text(chinese_sent))
+                sent_length_dict['chinese'].append(len(chinese_token_list))
+                token_dict['chinese'].extend(chinese_token_list)
+                
+        stat['num_pairs'] = sum(para_length_list)
+        stat['num_paragraphs'] = len(pairs)
+        stat['paragraph_length_list'] = para_length_list
+        
+        stat['vietnamese'] = {}
+        stat['vietnamese']['sentence_length_list'] = sent_length_dict['vietnamese']
+        stat['vietnamese']['unique_token_list'] = list(set(token_dict['vietnamese'])) 
+        stat['chinese'] = {}
+        stat['chinese']['sentence_length_list'] = sent_length_dict['chinese']
+        stat['chinese']['unique_token_list'] = list(set(token_dict['chinese'])) 
+        
+        output_folder = Path(self.config.output_folder_path) / "aligned_section_stat"
+        output_folder.mkdir(parents=True, exist_ok=True)
+        file_path = output_folder / f"{sect_id}.json" 
+        
+        if file_path.exists():
+            file_path.unlink()
+            
+        with open(file_path, "w", encoding='utf-8') as fp:
+            json.dump(stat, fp, ensure_ascii=False)
+            
+        if self.config.verbose: self.logger.info(f"Successfully save statistics of aligned section {sect_id} in {file_path}")
+                     
     def _save_aligned_section(
         self, 
         sect_id, 
@@ -149,6 +221,7 @@ class ParallelCorpusGenerator(LoggerMixin):
             author = self.config.xml_metadata['author'],
             period = self.config.xml_metadata['period'],
             language = self.config.xml_metadata['language'],
+            translator = self.config.xml_metadata['translator'],
             source = self.config.xml_metadata['source']
         )
         para_list = []
@@ -172,11 +245,10 @@ class ParallelCorpusGenerator(LoggerMixin):
             pairs.append(curr_pairs)
             para_list.append(curr_para_id)
 
-        print(pairs)
-
         sect_name = self.quocngu_section_names[sect_id]
-        output_dir = Path(self.config.output_folder_path) / f"section_xml"
+        output_dir = Path(self.config.output_folder_path) / "aligned_section_xml"
         
+        # delete file if it exists
         output_file = output_dir / f"{sect_id}.xml"
         if output_file.exists():
             output_file.unlink()
@@ -187,22 +259,41 @@ class ParallelCorpusGenerator(LoggerMixin):
             pairs = pairs,
             paragraphs_lst = para_list)
         xml_builder.save(output_name=f"{sect_id}.xml", output_dir=output_dir)
+        if self.config.verbose: self.logger.info(f"Successfully save aligned SinoNom-Vietnamese section {sect_id} to {output_file}.")
+        
+        self._save_stat_section(sect_id, pairs)
+        self._save_raw_aligned_section(sect_id, sinonom_sentences, quocngu_sentences, align_result)
 
+    def _save_raw_aligned_section(
+        self, 
+        sect_id, 
+        sinonom_sentences, 
+        quocngu_sentences, 
+        align_result, 
+    ):
+        text = ""
+        for bead in align_result:
+            text = text + self._get_sent(bead[0], sinonom_sentences) + '\n'
+            text = text + self._get_sent(bead[1], quocngu_sentences) + '\n'
+            text = text + '\n'
+        
+        output_folder = Path(self.config.output_folder_path) / "raw_aligned_section"
+        output_folder.mkdir(parents=True, exist_ok=True)
+        file_path = output_folder / f"{sect_id}.txt" 
+        
+        if file_path.exists():
+            file_path.unlink()
+            
+        with open(file_path, 'w', encoding='utf-8') as fp:
+            fp.write(text)
+        if self.config.verbose: self.logger.info(f"Successfully save raw aligned section {sect_id} in {file_path}")
+             
     def _get_sent(self, bead, sent_list) -> str:
         if len(bead) != 0:
             sent = ' '.join(sent_list[bead[0]:bead[-1]+1])
             return sent
         else:
             return ''
-
-    def _save_raw_sents(self):
-        pass 
-
-    def _save_preprocessed_sents(self):
-        pass
-
-    def _save_aligned_sects(self, sect_ids):
-        pass
 
     def _flatten_section_with_para_ids(self, section):
         '''

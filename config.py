@@ -6,9 +6,9 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class GeneratorConfig:
     # 
-    SENTENCE_BREAK: str = '\n'
-    PARAGRAPH_BREAK: str = '\n\n'
     PAGE_BREAK: str = '\f\n'
+    PARAGRAPH_BREAK: str = '\n\n'
+    SENTENCE_BREAK: str = '\n'
     SINONOM_SECTION_TEMPLATE: str = r"^第([一二三四五六七八九十百千零〇○]+)[回囘]"
     QUOCNGU_SECTION_TEMPLATE: str = r"^HỒI THỨ ([\wÀ-Ỵ]+(?: [\wÀ-Ỵ]+)*)"
 
@@ -19,11 +19,11 @@ class GeneratorConfig:
 
     # extract sinonom text
     sinonom_start_page = 1      # first page = 1
-    sinonom_num_pages = 542      # None = all
+    sinonom_num_pages = 542     # None = all
     
     # extract quocngu text
     quocngu_start_page = 48     # first page = 1
-    quocngu_num_pages = 500      # None = all
+    quocngu_num_pages = 3368    # 3368 + 48 - 1 = 3415 (the last content page)
 
     # QuocNgu text normalization
     noise_json_path: str = './quocngu_normalizer/config_noise.json'     # None for not cleaning noise 
@@ -34,20 +34,20 @@ class GeneratorConfig:
         "title": "Tây Du Ký",
         "volume": "",
         "author": "Ngô Thừa Ân",
-        "period": "",
+        "period": "Đại Minh",
         "language": "Hán-Việt",
-        "translator": "",
-        "source": "",
+        "translator": "Như Sơn, Mai Xuân Hải và Phương Oanh",
+        "source": "gutenberg.org",
     }
 
     # Align options
     align_options = {
         "max_align": 6,         # limit the number of alignments (0-1, 1-0, ...) per sentence
         "top_k": 3,             # select the top-k candidate pairs
-        "win": 10,               # sliding window.
-        "skip": -0.1,            # skip sent pairs with sim score smaller than this.
+        "win": 6,               # sliding window.
+        "skip": 0.0,            # skip sent pairs with sim score smaller than this.
         "margin": True,         # enable margin-based scoring.
-        "len_penalty": True,   # penalize alignments with large difference in length.
+        "len_penalty": True,    # penalize alignments with large difference in length.
         "is_split": True,       # condition check if paragraphs is slitted into sentences.
     }
 

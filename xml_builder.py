@@ -1,12 +1,9 @@
-import logging
 import re
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
 from copy import deepcopy
 from pathlib import Path
 from typing import List
-
-logger = logging.getLogger(__name__)
 
 
 class XMLBuilder:
@@ -18,6 +15,7 @@ class XMLBuilder:
         author: str,
         period: str,
         language: str,
+        translator: str,
         source: str,
     ):
         """Meta data sample:
@@ -29,6 +27,7 @@ class XMLBuilder:
             "period": "",
             "lang": "Việt",
             "source": "",
+            "translator": "",
             "page_id" : [],
         }
 
@@ -54,6 +53,7 @@ class XMLBuilder:
         ET.SubElement(meta, "AUTHOR").text = author
         ET.SubElement(meta, "PERIOD").text = period
         ET.SubElement(meta, "LANGUAGE").text = language
+        ET.SubElement(meta, "TRANSLATOR").text = translator
         ET.SubElement(meta, "SOURCE").text = source
 
         self.spit_sencetenc_func = self._split_sentence
@@ -88,14 +88,15 @@ class XMLBuilder:
             sect_name (str): Name of the section
             text (str): Raw input text to split into sentences and convert to STC tags
         """
-        sect = ET.SubElement(self.file, "SECT", ID=sect_id, NAME=sect_name)
+        sect_xml_id = f"{self.file_id}.{int(sect_id):03}"
+        sect = ET.SubElement(self.file, "SECT", ID=sect_xml_id, NAME=sect_name)
         for text, page_num in zip(texts, self.pages):
-            page_id = f"{sect_id}.{int(page_num):03}"
-            page = ET.SubElement(sect, "PAGE", ID=page_id)
+            page_xml_id = f"{sect_id}.{int(page_num):03}"
+            page = ET.SubElement(sect, "PAGE", ID=page_xml_id)
             sentences = self._split_sentence(text)
             for i, sentence in enumerate(sentences, start=1):
-                stc_id = f"{page_id}.{i:02}"
-                stc = ET.SubElement(page, "STC", ID=stc_id)
+                stc_xml_id = f"{page_xml_id}.{i:02}"
+                stc = ET.SubElement(page, "STC", ID=stc_xml_id)
                 stc.text = sentence
 
     def add_pair_sentence(self, sect_id: str, sect_name: str, pairs: List, paragraphs_lst: List):
@@ -108,14 +109,15 @@ class XMLBuilder:
             pairs (List): List of tuples, each containing a Vietnamese sentence and a Chinese sentence. Each item is a list of senences in the paragraph. 
             paragraphs_lst (List): List of number of paragraphs.
         """
-        sect = ET.SubElement(self.file, "SECT", ID=sect_id, NAME=sect_name)
+        sect_xml_id = f"{self.file_id}.{int(sect_id):03}"
+        sect = ET.SubElement(self.file, "SECT", ID=sect_xml_id, NAME=sect_name)
         for  pragrpah_num, pairs_sentences in zip(paragraphs_lst, pairs):
-            pragrpahs_id = f"{sect_id}.{int(pragrpah_num):03}"
-            page = ET.SubElement(sect, "PAGE", ID=pragrpahs_id)
+            pragrpahs_xml_id = f"{sect_xml_id}.{int(pragrpah_num):03}"
+            page = ET.SubElement(sect, "PAGE", ID=pragrpahs_xml_id)
             for i, pair in enumerate(pairs_sentences, start=1):
-                v_sentence, c_sentence = pair
-                stc_id = f"{pragrpahs_id}.{i:02}"
-                stc = ET.SubElement(page, "STC", ID=stc_id)
+                c_sentence, v_sentence = pair
+                stc_xml_id = f"{pragrpahs_xml_id}.{i:02}"
+                stc = ET.SubElement(page, "STC", ID=stc_xml_id)
                 c_stc = ET.SubElement(stc, "C")
                 c_stc.text = c_sentence
                 v_stc = ET.SubElement(stc, "V")
@@ -150,7 +152,6 @@ class XMLBuilder:
         full_path = output_dir / output_name
         with full_path.open("w", encoding=encoding) as f:
             f.write(self.to_string())
-        logger.info(f"Save file to {full_path}")
 
     def save_by_section(
         self,
@@ -191,8 +192,6 @@ class XMLBuilder:
                 xml_str = ET.tostring(new_root, encoding="unicode")
                 xml_str = minidom.parseString(xml_str).toprettyxml(indent="    ")
                 f.write(xml_str)
-            logger.info(f"Save section {sect_name} to {full_path}")
-
 
 def main():
 
@@ -278,7 +277,6 @@ def main():
 
     builder.save_by_section()
     builder.save()
-
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,7 @@
-/data/raw/
+data/raw/
+data/aligned_section_xml/
+data/aligned_section_stat/
+data/raw_aligned_section/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

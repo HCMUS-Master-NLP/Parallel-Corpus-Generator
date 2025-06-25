@@ -1,16 +1,10 @@
 
-from typing import Optional, Literal, List
+import re
 import fitz     # pymupdf
 from pathlib import Path
-import re
+from typing import Optional, Literal, List
 
 from config import GeneratorConfig
-
-# self.config.PAGE_BREAK = "\f\n"
-# self.config.PARAGRAPH_BREAK = "\n\n"
-# self.config.SENTENCE_BREAK = "\n"
-# CHINESE_CHAPTER_TEMPLATE = r"^第[一二三四五六七八九十百千零〇○]+[回囘]"
-# VIETNAMESE_CHAPTER_TEMPLATE = r"^HỒI THỨ(?: [\wÀ-Ỵ]+)+$"
 
 
 class PDFTextExtractor:
@@ -99,9 +93,12 @@ class QuocNguPDFExtractor(PDFTextExtractor):
             lines = list(l for l in page.split(self.config.SENTENCE_BREAK) if l.strip())
             processed_lines = []
             for i, line in enumerate(lines):
+                match = re.match(r'^([^\W\d_]+)', line, re.UNICODE) 
                 if pattern.match(line.strip()):
                     pass
-                elif (len(line.split(' ')) in [5,7,6,8]) and (not re.search(r"[.,;:?!]", line[-2:])) and (line.lstrip()[0].isalpha()) and (line.lstrip()[0].isupper()):
+                elif not match:
+                    pass
+                elif ((len(line.strip().split(' ')) in [5,7,6,8])) and (not re.search(r"[.,;:?!]", line[-2:])) and (not re.search(r"[.]", line)):
                     line = line + '.'        
                 processed_lines.append(line)
             processed_page_list.append("".join([line + self.config.SENTENCE_BREAK for line in processed_lines]))
@@ -158,7 +155,6 @@ class QuocNguPDFExtractor(PDFTextExtractor):
             for i in range(1, len(lines)):
                 last_line = repaired_lines[-1].rstrip()
                 current_line = lines[i].strip()
-
                 if pattern.match(last_line):
                     repaired_lines.append(current_line)
                 elif not re.search(r"[.;:?!]$", last_line):
@@ -170,7 +166,7 @@ class QuocNguPDFExtractor(PDFTextExtractor):
         return "".join([p + self.config.PAGE_BREAK for p in repaired_page_list])
 
     def _cleanup_text(self, text: str) -> str:
-        text = self._add_poem_period(text)
+        # text = self._add_poem_period(text)
         text = self._merge_newline_break_sentences(text)
         text = self._merge_page_break_sentences(text)
         text = text.replace(self.config.PAGE_BREAK,'')
