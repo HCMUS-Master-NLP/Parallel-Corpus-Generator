@@ -43,11 +43,11 @@ class GeneratorConfig:
     # Align options
     align_options = {
         "max_align": 6,         # limit the number of alignments (0-1, 1-0, ...) per sentence
-        "top_k": 3,             # select the top-k candidate pairs
+        "top_k": 5,             # select the top-k candidate pairs
         "win": 6,               # sliding window.
         "skip": 0.0,            # skip sent pairs with sim score smaller than this.
         "margin": True,         # enable margin-based scoring.
-        "len_penalty": True,    # penalize alignments with large difference in length.
+        "len_penalty": True,   # penalize alignments with large difference in length.
         "is_split": True,       # condition check if paragraphs is slitted into sentences.
     }
 

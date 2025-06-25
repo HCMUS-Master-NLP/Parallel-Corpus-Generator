@@ -166,7 +166,7 @@ class QuocNguPDFExtractor(PDFTextExtractor):
         return "".join([p + self.config.PAGE_BREAK for p in repaired_page_list])
 
     def _cleanup_text(self, text: str) -> str:
-        # text = self._add_poem_period(text)
+        text = self._add_poem_period(text)
         text = self._merge_newline_break_sentences(text)
         text = self._merge_page_break_sentences(text)
         text = text.replace(self.config.PAGE_BREAK,'')

@@ -1,15 +1,13 @@
-# alignment
 numba==0.60.0
 faiss-cpu
 googletrans==4.0.0rc1
 sentence-splitter==1.4
 sentence-transformers==3.2.1
-
-# other
+underthesea==6.8.4
+underthesea_core==1.0.4
 numpy==2.0
 pymupdf
 pandas
 pillow
-ipykernel
 matplotlib
 unicodedata
