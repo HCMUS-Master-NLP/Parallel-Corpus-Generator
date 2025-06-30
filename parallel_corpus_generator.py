@@ -138,7 +138,7 @@ class ParallelCorpusGenerator(LoggerMixin):
     
     def _is_vietnamese_word(self, token):
         # Giữ token chỉ gồm các chữ cái, chữ số (kể cả có dấu)
-        return re.fullmatch(r"[A-Za-zÀ-ỹà-ỹĐđ1-9]+", token) is not None
+        return re.fullmatch(r"[A-Za-zÀ-ỹà-ỹĐđ1-9_]+", token) is not None
     
     def _save_stat_section(
         self, 
@@ -174,7 +174,7 @@ class ParallelCorpusGenerator(LoggerMixin):
         for para_pairs in pairs:
             para_length_list.append(len(para_pairs))
             for chinese_sent, vietnamese_sent in para_pairs:
-                vietnamese_token_list = [token for token in word_tokenize(vietnamese_sent) if self._is_vietnamese_word(token)]
+                vietnamese_token_list = [token.lower() for token in word_tokenize(vietnamese_sent, format='text').split() if self._is_vietnamese_word(token)]
                 sent_length_dict['vietnamese'].append(len(vietnamese_token_list))
                 token_dict['vietnamese'].extend(vietnamese_token_list)
                 

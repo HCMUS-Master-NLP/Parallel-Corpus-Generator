@@ -1,4 +1,6 @@
 data/raw/
+data/output
+data/eval
 data/aligned_section_xml/
 data/aligned_section_stat/
 data/raw_aligned_section/

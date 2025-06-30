@@ -28,7 +28,7 @@ class QuocNguPreprocessor:
         text = re.sub(r'\s+', ' ', text.strip())
 
         # Define sentence ending patterns for Vietnamese text
-        sentence_endings = r'[.!?…]+'
+        sentence_endings = r'[.!?]+'
 
         # Split by sentence endings and keep the punctuation
         parts = re.split(f'({sentence_endings})', text)
